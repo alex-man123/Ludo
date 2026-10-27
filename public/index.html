@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="ro">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LUDO — Nu te supăra, frate!</title>
+  <meta name="description" content="Joc LUDO „Nu te supăra, frate!” — proiect Tehnici Web realizat de Alex și Cosmin.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect x='3' y='3' width='42' height='42' rx='12' fill='%23fffdf9' stroke='%232a2238' stroke-width='4'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23e5484d'/%3E%3Ccircle cx='32' cy='16' r='5' fill='%232f9e62'/%3E%3Ccircle cx='16' cy='32' r='5' fill='%233b73e8'/%3E%3Ccircle cx='32' cy='32' r='5' fill='%23f2c230'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Clientul Socket.IO este servit chiar de serverul jocului (aceeași origine). -->
+  <script src="/socket.io/socket.io.js" defer></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body data-screen="home">
+  <!-- Decor de fundal: contururi foarte discrete de zaruri și pioni -->
+  <svg class="backdrop" aria-hidden="true" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+    <g fill="none" stroke="#a3aec1" stroke-width="3" stroke-linejoin="round">
+      <rect x="-20" y="70" width="92" height="92" rx="24" transform="rotate(-14 26 116)"/>
+      <circle cx="10" cy="100" r="7" fill="#a9b4c6" stroke="none"/><circle cx="44" cy="134" r="7" fill="#a9b4c6" stroke="none"/>
+      <path d="M1372 820a34 12 0 0 0 68 0v-8a34 12 0 0 0-68 0zM1382 812c4-16 11-27 13-37h22c2 10 9 21 13 37M1406 766a18 18 0 1 1 0-.1"/>
+      <circle cx="1440" cy="70" r="50" stroke-dasharray="10 12"/>
+      <path d="M-10 860l34-58 34 58z"/>
+    </g>
+  </svg>
+
+  <main id="app">
+
+    <!-- ============ ECRAN PRINCIPAL ============ -->
+    <section id="screen-home" class="screen active" aria-labelledby="home-title">
+      <div class="home">
+        <div class="hero" aria-hidden="true">
+          <div class="hero-scene">
+            <div class="hero-board tray"><svg id="home-board" class="board"></svg></div>
+            <div class="hero-die" id="hero-die"></div>
+            <div class="hero-pawn hero-pawn-a" id="hero-pawn-a"></div>
+            <div class="hero-pawn hero-pawn-b" id="hero-pawn-b"></div>
+          </div>
+        </div>
+
+        <div class="home-panel">
+          <h1 id="home-title" class="logo">
+            <span class="logo-word" aria-label="LUDO"><span>L</span><span>U</span><span>D</span><span>O</span></span>
+            <span id="logo-mark"></span>
+          </h1>
+          <p class="logo-sub">Nu te supăra, frate!</p>
+          <p class="tagline">Jocul clasic de societate pentru 2–4 jucători. Scoate pionii din bază, ferește-i de adversari și adu-i pe toți acasă.</p>
+
+          <nav class="modes" aria-label="Moduri de joc">
+            <button class="mode mode-primary" data-action="local">
+              <span class="mode-icon" data-icon="users" data-size="26"></span>
+              <span class="mode-text"><b>Cu prietenii</b><small>Pe același dispozitiv, 2–4 jucători</small></span>
+              <span class="mode-go" data-icon="arrow"></span>
+            </button>
+            <button class="mode" data-action="ai">
+              <span class="mode-icon mode-icon-ai" data-icon="robot" data-size="26"></span>
+              <span class="mode-text"><b>Contra AI</b><small>Alege-ți adversarii și dificultatea</small></span>
+              <span class="mode-go" data-icon="arrow"></span>
+            </button>
+            <button class="mode" data-action="online">
+              <span class="mode-icon mode-icon-online" data-icon="globe" data-size="26"></span>
+              <span class="mode-text"><b>Online</b><small>Cameră privată cu cod sau link de invitație</small></span>
+              <span class="mode-go" data-icon="arrow"></span>
+            </button>
+          </nav>
+
+          <div class="home-foot">
+            <button class="btn btn-ghost btn-md" data-action="rules"><span data-icon="book" data-size="20"></span>Cum se joacă</button>
+            <button class="btn btn-ghost btn-md" data-action="settings"><span data-icon="sliders" data-size="20"></span>Setări</button>
+            <p class="credits">Proiect realizat de <b>Alex</b> și <b>Cosmin</b></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CONFIGURARE PARTIDĂ ============ -->
+    <section id="screen-setup" class="screen" aria-labelledby="setup-title">
+      <div class="setup">
+        <header class="setup-head">
+          <button class="btn btn-ghost btn-sm" data-action="home"><span data-icon="back" data-size="18"></span>Înapoi</button>
+          <div class="setup-titles">
+            <p class="eyebrow">Partidă nouă</p>
+            <h2 id="setup-title">Cu prietenii</h2>
+          </div>
+          <div id="ai-count" class="ai-count" hidden>
+            <span class="field-label" id="ai-count-label">Adversari AI</span>
+            <div class="segmented" role="radiogroup" aria-labelledby="ai-count-label">
+              <label><input type="radio" name="aiCount" value="1"><span>1</span></label>
+              <label><input type="radio" name="aiCount" value="2"><span>2</span></label>
+              <label><input type="radio" name="aiCount" value="3" checked><span>3</span></label>
+            </div>
+          </div>
+        </header>
+
+        <form id="setup-form" novalidate>
+          <p class="setup-hint">Pentru fiecare culoare alege cine joacă: un om, calculatorul sau nimeni.</p>
+          <div id="seats" class="seats"></div>
+
+          <div class="setup-foot">
+            <aside class="rules-strip">
+              <h3>Regulile acestei aplicații, pe scurt</h3>
+              <ul>
+                <li><span class="rule-badge">6</span>scoate un pion pe start și îți dă încă o aruncare</li>
+                <li><span class="rule-badge">3×6</span>al treilea 6 la rând încheie tura</li>
+                <li><span class="rule-badge" data-icon="bolt" data-size="14"></span>ajungi exact pe un adversar → îl trimiți în bază</li>
+                <li><span class="rule-badge" data-icon="alert" data-size="14"></span>nu există poziții sigure pe traseu</li>
+                <li><span class="rule-badge" data-icon="flag" data-size="14"></span>acasă ajungi doar cu valoarea exactă</li>
+                <li><span class="rule-badge">4</span>câștigă primul cu toți pionii acasă</li>
+              </ul>
+              <button type="button" class="link-btn" data-action="rules">Regulile complete <span data-icon="arrow" data-size="16"></span></button>
+            </aside>
+            <div class="start-zone">
+              <p id="setup-summary" class="setup-summary"></p>
+              <p id="setup-error" class="form-error" role="alert"></p>
+              <button type="submit" class="btn btn-primary btn-xl"><span data-icon="play" data-size="20"></span>Începe partida</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ============ ONLINE: CREARE / INTRARE ============ -->
+    <section id="screen-online" class="screen" aria-labelledby="online-title">
+      <div class="online">
+        <header class="setup-head">
+          <button class="btn btn-ghost btn-sm" data-action="home"><span data-icon="back" data-size="18"></span>Înapoi</button>
+          <div class="setup-titles">
+            <p class="eyebrow">Joc online</p>
+            <h2 id="online-title">Joacă cu prietenii</h2>
+          </div>
+          <span></span>
+        </header>
+        <p id="invite-banner" class="invite-banner" hidden></p>
+        <div id="rejoin" class="invite-banner rejoin" hidden></div>
+        <div class="online-cards">
+          <form id="form-create" class="online-card" novalidate>
+            <span class="online-card-icon" data-icon="home" data-size="26"></span>
+            <h3>Creează o cameră</h3>
+            <p>Primești un cod și un link pe care le trimiți prietenilor.</p>
+            <label class="field"><span class="field-label">Numele tău</span>
+              <input name="name" class="input" maxlength="16" autocomplete="nickname" placeholder="ex. Alex"></label>
+            <button type="submit" class="btn btn-primary btn-xl"><span data-icon="play" data-size="20"></span>Creează camera</button>
+          </form>
+          <form id="form-join" class="online-card" novalidate>
+            <span class="online-card-icon online-card-icon-join" data-icon="arrow" data-size="26"></span>
+            <h3>Intră într-o cameră</h3>
+            <p>Scrie codul de 6 caractere primit de la gazdă sau deschide linkul de invitație.</p>
+            <label class="field"><span class="field-label">Numele tău</span>
+              <input name="name" class="input" maxlength="16" autocomplete="nickname" placeholder="ex. Cosmin"></label>
+            <label class="field"><span class="field-label">Codul camerei</span>
+              <input id="join-code" name="code" class="input code-input" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABC234"></label>
+            <button type="submit" class="btn btn-primary btn-xl"><span data-icon="arrow" data-size="20"></span>Intră în cameră</button>
+          </form>
+        </div>
+        <p id="online-error" class="form-error online-error" role="alert"></p>
+        <p class="online-note"><span data-icon="alert" data-size="18"></span>Invitațiile funcționează prin cod sau link. Nu există încă conturi sau listă de prieteni.</p>
+      </div>
+    </section>
+
+    <!-- ============ ONLINE: LOBBY ============ -->
+    <section id="screen-lobby" class="screen" aria-labelledby="lobby-title">
+      <div class="lobby">
+        <header class="setup-head">
+          <button class="btn btn-ghost btn-sm" id="lobby-leave"><span data-icon="exit" data-size="18"></span>Părăsește camera</button>
+          <div class="setup-titles">
+            <p class="eyebrow">Cameră online</p>
+            <h2 id="lobby-title">Lobby</h2>
+          </div>
+          <span id="lobby-conn" class="conn-chip" data-kind="ok" role="status">Conectat</span>
+        </header>
+
+        <section class="invite-card" aria-label="Invitație">
+          <div class="invite-code">
+            <span class="field-label">Codul camerei</span>
+            <output id="lobby-code" class="code-display">——————</output>
+            <input id="lobby-code-input" class="sr-only" readonly tabindex="-1" aria-hidden="true">
+          </div>
+          <div class="invite-link">
+            <label class="field-label" for="lobby-link">Link de invitație</label>
+            <input id="lobby-link" class="input" readonly>
+          </div>
+          <div class="invite-actions">
+            <button id="copy-code" class="btn btn-ghost"><span data-icon="dice" data-size="18"></span>Copiază codul</button>
+            <button id="copy-link" class="btn btn-primary"><span data-icon="arrow" data-size="18"></span>Copiază linkul</button>
+          </div>
+          <p id="copy-feedback" class="copy-feedback" aria-live="polite"></p>
+          <div id="lan-hint" class="lan-hint" hidden></div>
+        </section>
+
+        <p id="lobby-role" class="setup-hint"></p>
+        <div id="lobby-seats" class="seats"></div>
+
+        <div class="lobby-foot">
+          <div>
+            <p id="lobby-status" class="setup-summary" role="status"></p>
+            <p id="lobby-error" class="form-error" role="alert"></p>
+          </div>
+          <div class="lobby-buttons">
+            <button id="lobby-ready" class="btn btn-primary btn-xl"></button>
+            <button id="lobby-start" class="btn btn-primary btn-xl"><span data-icon="play" data-size="20"></span>Pornește partida</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ JOC ============ -->
+    <section id="screen-game" class="screen" aria-label="Partidă în desfășurare">
+      <div class="game">
+        <article class="pcard area-red" id="pcard-red" data-color="red"></article>
+        <article class="pcard area-green" id="pcard-green" data-color="green"></article>
+
+        <div class="stage">
+          <div class="tray"><svg id="board" class="board" role="group" aria-label="Tabla de joc"></svg></div>
+        </div>
+
+        <section class="action" id="action" aria-label="Acțiunea curentă">
+          <div class="action-head">
+            <span id="action-avatar"></span>
+            <div class="action-who">
+              <p id="action-label" class="eyebrow">La mutare</p>
+              <p id="action-name" class="action-name" aria-live="polite">—</p>
+            </div>
+          </div>
+          <div class="action-main">
+            <button id="die" class="die" type="button" aria-label="Aruncă zarul"></button>
+            <p id="action-hint" class="action-hint" aria-live="polite">—</p>
+          </div>
+          <button id="roll-btn" class="btn btn-accent btn-block roll-btn"><span data-icon="dice" data-size="20"></span><span id="roll-label">Aruncă zarul</span></button>
+          <p id="notice" class="notice" aria-live="polite"></p>
+        </section>
+
+        <div class="tools">
+          <div class="toolbar">
+            <button class="tool" data-action="rules"><span data-icon="book"></span>Reguli</button>
+            <button class="tool" data-action="settings"><span data-icon="sliders"></span>Setări</button>
+            <button class="tool tool-danger" data-action="leave"><span data-icon="exit"></span>Părăsește</button>
+          </div>
+          <details class="history" id="history">
+            <summary><span data-icon="history" data-size="18"></span>Istoric <span class="history-count" id="history-count"></span><span class="chev" data-icon="chevron" data-size="18"></span></summary>
+            <ol id="log" class="log"></ol>
+          </details>
+        </div>
+
+        <article class="pcard area-blue" id="pcard-blue" data-color="blue"></article>
+        <article class="pcard area-yellow" id="pcard-yellow" data-color="yellow"></article>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ DIALOGURI ============ -->
+  <dialog id="dlg-rules" class="dialog dialog-wide" aria-labelledby="rules-title">
+    <div class="dialog-head">
+      <span class="dialog-icon" data-icon="book"></span>
+      <h2 id="rules-title">Cum se joacă</h2>
+      <button class="icon-btn" data-close aria-label="Închide"><span data-icon="close" data-size="18"></span></button>
+    </div>
+    <div class="dialog-body rules">
+      <p class="rules-note">Acestea sunt <b>regulile acestei aplicații</b>. Edițiile LUDO / „Nu te supăra, frate!” diferă între ele; noi am ales o variantă clară și consecventă.</p>
+      <h3>Tabla și obiectivul</h3>
+      <ul>
+        <li>Fiecare jucător are 4 pioni, o bază, o poziție de start (marcată cu simbolul culorii) și un culoar final propriu.</li>
+        <li>Traseul comun are 52 de poziții; culoarul final are 6 poziții, ultima fiind triunghiul din centru.</li>
+        <li>Pionii se deplasează în sensul acelor de ceasornic. Săgeata colorată arată unde intră fiecare culoare pe culoarul ei.</li>
+        <li>Câștigă primul jucător care aduce toți cei 4 pioni la capătul culoarului.</li>
+      </ul>
+      <h3>Ture și zar</h3>
+      <ul>
+        <li>Ordinea este fixă: Roșu → Verde → Galben → Albastru (doar culorile din partidă).</li>
+        <li>Fiecare aruncare mută un singur pion, exact cu valoarea zarului.</li>
+        <li>Un 6 îți dă o nouă aruncare după mutare. Dacă nu poți muta nimic cu 6, tot mai arunci o dată.</li>
+        <li>Al treilea 6 consecutiv nu mai produce nicio mutare și tura se încheie; mutările de dinainte rămân.</li>
+        <li>Dacă nu ai nicio mutare posibilă (altă valoare decât 6), tura trece automat la următorul jucător.</li>
+        <li>Capturarea sau aducerea unui pion acasă nu dau aruncări bonus.</li>
+      </ul>
+      <h3>Ieșirea din bază</h3>
+      <ul>
+        <li>Un pion iese din bază doar cu 6 și se așază pe poziția de start (nu mai avansează încă 6).</li>
+        <li>Cu un 6 poți alege: scoți un pion nou sau muți unul aflat deja pe traseu.</li>
+        <li>Dacă pe start stă deja un pion propriu, nu poți scoate altul până nu îl muți.</li>
+      </ul>
+      <h3>Deplasare și capturare</h3>
+      <ul>
+        <li>Pionii pot sări peste alți pioni. Nu există blocaje.</li>
+        <li>Doi pioni proprii nu pot sta pe aceeași poziție (excepție: capătul culoarului).</li>
+        <li>Dacă ajungi exact pe poziția unui adversar, acesta se întoarce în bază — inclusiv pe pozițiile de start. Nu există poziții sigure pe traseul comun.</li>
+        <li>Pionii din culoarul final sunt protejați: adversarii nu au acces acolo.</li>
+        <li>Pentru a ajunge la capăt ai nevoie de valoarea exactă; mutările care depășesc capătul nu sunt permise.</li>
+      </ul>
+      <h3>Cum identifici jucătorii</h3>
+      <p class="symbols-legend" id="symbols-legend"></p>
+      <h3>Comenzi</h3>
+      <ul>
+        <li>Apasă <b>Aruncă zarul</b>, zarul însuși sau tasta <kbd>Spațiu</kbd>.</li>
+        <li>Pionii care pot fi mutați sunt ridicați și au un contur sub ei. Treci cu mouse-ul peste ei pentru a vedea destinația, apoi apasă pe pion (sau <kbd>Tab</kbd> + <kbd>Enter</kbd>).</li>
+      </ul>
+    </div>
+  </dialog>
+
+  <dialog id="dlg-settings" class="dialog" aria-labelledby="settings-title">
+    <div class="dialog-head">
+      <span class="dialog-icon" data-icon="sliders"></span>
+      <h2 id="settings-title">Setări</h2>
+      <button class="icon-btn" data-close aria-label="Închide"><span data-icon="close" data-size="18"></span></button>
+    </div>
+    <form class="dialog-body settings-form" id="settings-form">
+      <label class="switch-row"><span>Sunet</span><input type="checkbox" name="sound" role="switch"></label>
+      <label class="switch-row"><span>Animații</span><input type="checkbox" name="animations" role="switch"></label>
+      <label class="switch-row"><span>Mută automat când există o singură variantă</span><input type="checkbox" name="autoMove" role="switch"></label>
+      <div class="switch-row">
+        <span>Viteza AI</span>
+        <div class="segmented" role="radiogroup" aria-label="Viteza AI">
+          <label><input type="radio" name="aiSpeed" value="fast"><span>Rapidă</span></label>
+          <label><input type="radio" name="aiSpeed" value="normal"><span>Normală</span></label>
+          <label><input type="radio" name="aiSpeed" value="slow"><span>Lentă</span></label>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlg-leave" class="dialog" aria-labelledby="leave-title">
+    <div class="dialog-head">
+      <span class="dialog-icon dialog-icon-danger" data-icon="exit"></span>
+      <h2 id="leave-title">Părăsești partida?</h2>
+    </div>
+    <div class="dialog-body">
+      <p id="leave-text">Partida curentă se va încheia și progresul nu va fi salvat.</p>
+      <div class="dialog-actions">
+        <button class="btn btn-ghost" data-close>Continuă jocul</button>
+        <button class="btn btn-danger" id="confirm-leave">Da, părăsește</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="victory" class="victory" hidden>
+    <div class="confetti" aria-hidden="true"></div>
+    <div class="victory-card" id="victory-card" role="dialog" aria-modal="true" aria-labelledby="victory-title">
+      <div id="victory-avatar" class="victory-avatar"></div>
+      <p id="victory-color" class="victory-color"></p>
+      <h2 id="victory-title">Victorie!</h2>
+      <p id="victory-text" class="victory-text"></p>
+      <ol id="victory-standings" class="standings"></ol>
+      <div class="dialog-actions">
+        <button class="btn btn-ghost" id="victory-home"><span data-icon="home" data-size="18"></span>Meniu principal</button>
+        <button class="btn btn-primary" id="victory-again"><span data-icon="replay" data-size="18"></span><span id="victory-again-label">Joacă din nou</span></button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

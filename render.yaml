@@ -1,0 +1,15 @@
+# Blueprint Render: un singur serviciu web Node.js (fișiere statice + Socket.IO pe același port).
+# Se folosește din Render Dashboard → New → Blueprint, după ce proiectul este într-un depozit GitHub.
+services:
+  - type: web
+    name: ludo-nu-te-supara-frate
+    runtime: node
+    plan: free                 # fără `plan`, Render alege un plan plătit
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY        # Render pune aplicația în spatele unui proxy: IP-ul real vine din X-Forwarded-For
+        value: "1"

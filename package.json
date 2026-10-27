@@ -1,0 +1,21 @@
+{
+  "name": "ludo-nu-te-supara-frate",
+  "version": "0.3.0",
+  "description": "LUDO — Nu te supăra, frate! Proiect Tehnici Web realizat de Alex și Cosmin",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "engines": {
+    "node": ">=20 <25"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "socket.io-client": "^4.8.1"
+  }
+}
